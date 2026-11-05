@@ -1,3 +1,27 @@
 {
-    "GLOBAL_MODEL": "MLP"
+    "GLOBAL_MODEL": "MLP",
+    "RELIANCE": "Random Forest",
+    "TCS": "Random Forest",
+    "INFY": "Random Forest",
+    "HDFCBANK": "Random Forest",
+    "ICICIBANK": "Random Forest",
+    "SBIN": "MLP",
+    "AXISBANK": "Random Forest",
+    "KOTAKBANK": "Gradient Boosting",
+    "LT": "Random Forest",
+    "ITC": "Random Forest",
+    "IRCTC": "Random Forest",
+    "IOB": "Random Forest",
+    "SUNTV": "Random Forest",
+    "INDIANB": "Random Forest",
+    "PAGEIND": "MLP",
+    "WIPRO": "Random Forest",
+    "ITCHOTELS": "Random Forest",
+    "APOLLOHOSP": "MLP",
+    "FORTIS": "Random Forest",
+    "WAAREEENER": "Gradient Boosting",
+    "NDTV": "Random Forest",
+    "TECHM": "Random Forest",
+    "TATASTEEL": "Random Forest",
+    "BHARTIARTL": "Random Forest"
 }

@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
+from statsmodels.tsa.arima.model import ARIMA
 
 from agents.data_agent import load_stock_data
 from agents.feature_agent import make_features
@@ -88,40 +89,31 @@ def generate_forecast(
         close_history,
         forecast_days=5):
 
-    model = get_model(model_name)
-
-    feature_columns = get_feature_columns()
-
-    features = make_features(
-        close_history
-    )
-
-    latest = (
-        features
-        .tail(1)
-        .copy()
-    )
-
-    if "close" in latest.columns:
-
-        latest = latest.drop(
-            columns=["close"]
-        )
-
-    if "ticker_encoded" in feature_columns:
-        latest["ticker_encoded"] = encode_symbol(symbol)
-
-    latest = latest[
-        feature_columns
-    ]
-
     current_price = float(
         close_history.iloc[-1]
     )
 
-    model_prediction = float(
-        model.predict(latest)[0]
-    )
+    if model_name == "ARIMA":
+        model_prediction = float(
+            ARIMA(
+                close_history.to_numpy(),
+                order=(5, 1, 0)
+            ).fit().forecast(steps=1)[0]
+        )
+    else:
+        model = get_model(model_name)
+        feature_columns = get_feature_columns()
+        features = make_features(close_history)
+        latest = features.tail(1).copy()
+
+        if "close" in latest.columns:
+            latest = latest.drop(columns=["close"])
+
+        if "ticker_encoded" in feature_columns:
+            latest["ticker_encoded"] = encode_symbol(symbol)
+
+        latest = latest[feature_columns]
+        model_prediction = float(model.predict(latest)[0])
 
     print("\n====================")
     print("SYMBOL:", symbol)
@@ -282,9 +274,10 @@ def predict():
         )
 
         performance_metrics = get_model_metrics(
-            selected_model
+            selected_model,
+            symbol
         )
-        model_rankings = get_model_rankings()
+        model_rankings = get_model_rankings(symbol)
 
         print(
             "Selected Model:",
