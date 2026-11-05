@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediction Result</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <!--
+
+        body{
+            font-family:Arial, sans-serif;
+            background:#f5f7fb;
+            margin:0;
+            padding:0;
+        }
+
+        .container{
+            width:900px;
+            margin:40px auto;
+            background:white;
+            padding:30px;
+            border-radius:10px;
+            box-shadow:0px 0px 12px rgba(0,0,0,0.1);
+        }
+
+        h1{
+            text-align:center;
+            color:#333;
+        }
+
+        .card{
+            padding:15px;
+            margin-bottom:15px;
+            border-left:5px solid #007bff;
+            background:#f8f9fa;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            margin-top:20px;
+        }
+
+        table, th, td{
+            border:1px solid #ddd;
+        }
+
+        th{
+            background:#007bff;
+            color:white;
+        }
+
+        th, td{
+            padding:10px;
+            text-align:center;
+        }
+
+        .back-btn{
+            margin-top:20px;
+        }
+
+        .back-btn a{
+            text-decoration:none;
+            background:#28a745;
+            color:white;
+            padding:10px 20px;
+            border-radius:5px;
+        }
+
+        .back-btn a:hover{
+            background:#1f7f34;
+        }
+
+    -->
+
+</head>
+<body>
+
+<div class="container">
+
+    {% if error %}
+    <div class="error-message">{{ error }}</div>
+    {% endif %}
+
+    <h1>Forecast Result</h1>
+
+    <div class="card">
+        <strong>Stock Symbol:</strong>
+        {{ symbol }}
+    </div>
+
+    <div class="card">
+        <strong>Selected Model:</strong>
+        {{ selected_model }}
+    </div>
+
+    <div class="card">
+        <strong>Forecast Days:</strong>
+        {{ forecast_days }}
+    </div>
+
+    <div class="card">
+        <strong>Current Price:</strong>
+        ₹ {{ current_price }}
+    </div>
+
+    <h2>Model Performance</h2>
+    <p class="metrics-note">
+        Validation metrics for {{ selected_model }}. Lower values indicate
+        smaller prediction errors.
+    </p>
+    <div class="metrics-grid">
+        {% for metric_name in ["RMSE", "MAE", "MAPE"] %}
+        <div class="metric-card">
+            <strong>{{ metric_name }}</strong>
+            <span>
+                {% if performance_metrics and performance_metrics[metric_name] is not none %}
+                    {{ "%.2f"|format(performance_metrics[metric_name]) }}{% if metric_name == "MAPE" %}%{% endif %}
+                {% else %}
+                    Not available — retrain the models
+                {% endif %}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h2>Model Ranking:</h2>
+    {% if model_rankings %}
+    <table>
+        <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Model</th>
+                <th>RMSE</th>
+                <th>MAE</th>
+                <th>MAPE</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in model_rankings %}
+            <tr>
+                <td>{{ row.rank }}</td>
+                <td>{{ row.Model }}</td>
+                <td>{% if row.RMSE is not none %}{{ "%.6f"|format(row.RMSE) }}{% else %}N/A{% endif %}</td>
+                <td>{% if row.MAE is not none %}{{ "%.6f"|format(row.MAE) }}{% else %}N/A{% endif %}</td>
+                <td>{% if row.MAPE is not none %}{{ "%.6f"|format(row.MAPE) }}{% else %}N/A{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="metrics-note">No model ranking is available. Train the models to generate a scorecard.</p>
+    {% endif %}
+
+    {% if chart_image %}
+    <h2>Price Forecast Chart</h2>
+    <div class="chart-container">
+        <img
+            class="forecast-chart"
+            src="{{ chart_image }}"
+            alt="Price forecast chart for {{ symbol }}">
+    </div>
+    {% endif %}
+
+    <h2>Forecast Values</h2>
+
+    <table>
+
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Predicted Price</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+        {% for row in forecast_data %}
+
+            <tr>
+                <td>{{ row.date }}</td>
+                <td>₹ {{ "%.2f"|format(row.price) }}</td>
+            </tr>
+
+        {% endfor %}
+
+        </tbody>
+
+    </table>
+
+    <div class="back-btn">
+        <a href="/">New Prediction</a>
+    </div>
+
+</div>
+
+</body>
+</html>

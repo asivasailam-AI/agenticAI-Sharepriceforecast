@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Forecasting System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <!--
+
+        body{
+            font-family: Arial, sans-serif;
+            background:#f5f7fb;
+            margin:0;
+            padding:0;
+        }
+
+        .container{
+            width:500px;
+            margin:80px auto;
+            background:white;
+            padding:30px;
+            border-radius:10px;
+            box-shadow:0 0 15px rgba(0,0,0,0.1);
+        }
+
+        h1{
+            text-align:center;
+            color:#333;
+        }
+
+        label{
+            display:block;
+            margin-top:15px;
+            font-weight:bold;
+        }
+
+        input{
+            width:100%;
+            padding:12px;
+            font-size:16px;
+            margin-top:5px;
+            border:1px solid #ddd;
+            border-radius:5px;
+        }
+
+        button{
+            width:100%;
+            margin-top:25px;
+            padding:12px;
+            background:#007bff;
+            color:white;
+            border:none;
+            border-radius:5px;
+            font-size:16px;
+            cursor:pointer;
+        }
+
+        button:hover{
+            background:#0056b3;
+        }
+
+    -->
+
+</head>
+<body>
+
+<div class="container container--form">
+
+    <p class="eyebrow">Share Price Forecasting</p>
+
+    <h1>Share price Forecasting Using  Multi Agents AI</h1>
+    <p class="subtitle">Get a data-driven stock price forecast in just a few seconds.</p>
+
+    <form action="/predict" method="POST">
+
+        <label>Stock Symbol</label>
+
+        <input
+          type="text"
+          name="symbol"
+          placeholder="RELIANCE"
+          required>
+
+        <label>Forecast Days</label>
+
+        <input
+          type="number"
+          name="forecast_days"
+          value="5"
+          min="1"
+          max="30"
+          required>
+
+        <button type="submit">
+            Predict Stock Price
+        </button>
+
+    </form>
+
+</div>
+
+</body>
+</html>
