@@ -107,8 +107,8 @@
 
     <h2>Model Performance</h2>
     <p class="metrics-note">
-        Validation metrics for {{ selected_model }}. Lower values indicate
-        smaller prediction errors.
+        Validation metrics for {{ selected_model }} on {{ symbol }}.
+        Lower values indicate smaller prediction errors.
     </p>
     <div class="metrics-grid">
         {% for metric_name in ["RMSE", "MAE", "MAPE"] %}
@@ -150,7 +150,11 @@
         </tbody>
     </table>
     {% else %}
-    <p class="metrics-note">No model ranking is available. Train the models to generate a scorecard.</p>
+    <p class="metrics-note">
+        No ticker-specific scorecard is available for {{ symbol }}.
+        The selected model may be the global fallback. Retrain the models to
+        generate per-symbol validation rankings.
+    </p>
     {% endif %}
 
     {% if chart_image %}

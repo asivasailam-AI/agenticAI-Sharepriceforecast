@@ -33,17 +33,21 @@ MODELS = {
     "MLP":
     joblib.load(
         MODEL_DIR / "mlp.pkl"
-    ),
-
-    "ARIMA":
-    joblib.load(
-        MODEL_DIR / "arima.pkl"
     )
 }
+
+SUPPORTED_MODEL_NAMES = frozenset(
+    (*MODELS, "ARIMA")
+)
 
 
 def get_model(model_name):
 
+    if model_name == "ARIMA":
+        raise ValueError(
+            "ARIMA is fitted from the requested stock history and has no "
+            "saved estimator."
+        )
     return MODELS[model_name]
 
 
@@ -52,19 +56,37 @@ def get_feature_columns():
     return FEATURE_COLUMNS
 
 
-def get_model_metrics(model_name):
+def _scorecard_rows(symbol=None):
+    scorecard_path = MODEL_DIR / "scorecard.csv"
+    if not scorecard_path.exists():
+        return pd.DataFrame()
+
+    scorecard = pd.read_csv(scorecard_path)
+    if symbol is None:
+        if "Symbol" in scorecard.columns:
+            return scorecard.loc[
+                scorecard["Symbol"].astype(str).str.upper() == "GLOBAL"
+            ]
+        return scorecard
+
+    if "Symbol" not in scorecard.columns:
+        return scorecard.iloc[0:0]
+    return scorecard.loc[
+        scorecard["Symbol"].astype(str).str.upper()
+        == symbol.upper().strip()
+    ]
+
+
+def get_model_metrics(model_name, symbol=None):
 
     metrics = {
         "RMSE": None,
         "MAE": None,
         "MAPE": None
     }
-    scorecard_path = MODEL_DIR / "scorecard.csv"
-
-    if not scorecard_path.exists():
+    scorecard = _scorecard_rows(symbol)
+    if scorecard.empty:
         return metrics
-
-    scorecard = pd.read_csv(scorecard_path)
     model_scores = scorecard.loc[
         scorecard["Model"] == model_name
     ]
@@ -84,14 +106,10 @@ def get_model_metrics(model_name):
     return metrics
 
 
-def get_model_rankings():
-
-    scorecard_path = MODEL_DIR / "scorecard.csv"
-
-    if not scorecard_path.exists():
+def get_model_rankings(symbol=None):
+    scorecard = _scorecard_rows(symbol)
+    if scorecard.empty:
         return []
-
-    scorecard = pd.read_csv(scorecard_path)
     if "Model" not in scorecard.columns or "RMSE" not in scorecard.columns:
         raise ValueError(
             "The model scorecard must contain Model and RMSE columns."
@@ -111,7 +129,7 @@ def get_model_rankings():
     rankings = []
     for rank, (_, row) in enumerate(scorecard.iterrows()):
         ranking = {
-            "rank": rank,
+            "rank": rank + 1,
             "Model": row["Model"]
         }
         for metric_name in ("RMSE", "MAE", "MAPE"):
