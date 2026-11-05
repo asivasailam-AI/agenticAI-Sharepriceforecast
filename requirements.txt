@@ -6,4 +6,4 @@ joblib==1.6.0
 nselib==2.5.1
 statsmodels==0.15.0
 gunicorn==26.2.0
-mathplotlib==3.11.2
+matplotlib==3.11.2
