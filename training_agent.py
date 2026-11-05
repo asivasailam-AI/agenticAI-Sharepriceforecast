@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import warnings
 import joblib
@@ -75,6 +76,7 @@ N_LAGS = 10
 TEST_SIZE = 0.20
 
 MODEL_DIR = "models"
+RANDOM_FOREST_ONLY = "--random-forest-only" in sys.argv
 
 os.makedirs(
     MODEL_DIR,
@@ -286,6 +288,78 @@ def evaluate(actual, predicted):
     return rmse, mae, mape
 
 
+def update_random_forest_scorecard(test_df, y_test, predictions):
+
+    test_symbols = test_df["symbol"].to_numpy()
+    rows = []
+
+    rmse, mae, mape = evaluate(y_test, predictions)
+    rows.append({
+        "Symbol": "GLOBAL",
+        "Model": "Random Forest",
+        "RMSE": rmse,
+        "MAE": mae,
+        "MAPE": mape
+    })
+
+    for symbol in pd.unique(test_symbols):
+        symbol_mask = test_symbols == symbol
+        rmse, mae, mape = evaluate(
+            y_test.iloc[np.flatnonzero(symbol_mask)],
+            predictions[symbol_mask]
+        )
+        rows.append({
+            "Symbol": symbol,
+            "Model": "Random Forest",
+            "RMSE": rmse,
+            "MAE": mae,
+            "MAPE": mape
+        })
+
+    scorecard_path = f"{MODEL_DIR}/scorecard.csv"
+    if os.path.exists(scorecard_path):
+        scorecard = pd.read_csv(scorecard_path)
+        if "Model" not in scorecard.columns:
+            raise ValueError(
+                "The existing scorecard has no Model column."
+            )
+        scorecard = scorecard.loc[
+            scorecard["Model"] != "Random Forest"
+        ]
+    else:
+        scorecard = pd.DataFrame()
+
+    scorecard = pd.concat(
+        [scorecard, pd.DataFrame(rows)],
+        ignore_index=True
+    )
+    scorecard.to_csv(scorecard_path, index=False)
+
+    if "Symbol" in scorecard.columns:
+        leaderboard = {}
+        for symbol, symbol_scores in scorecard.groupby("Symbol"):
+            valid_scores = symbol_scores.copy()
+            valid_scores["RMSE"] = pd.to_numeric(
+                valid_scores["RMSE"],
+                errors="coerce"
+            )
+            valid_scores = valid_scores.loc[
+                np.isfinite(valid_scores["RMSE"])
+            ].sort_values("RMSE", kind="stable")
+            if valid_scores.empty:
+                continue
+            winner = valid_scores.iloc[0]["Model"]
+            if symbol == "GLOBAL":
+                leaderboard["GLOBAL_MODEL"] = winner
+            else:
+                leaderboard[symbol] = winner
+
+        with open(f"{MODEL_DIR}/leaderboard.json", "w") as file:
+            json.dump(leaderboard, file, indent=4)
+
+    return rows[0]
+
+
 # =====================================================
 # COLLECT DATA
 # =====================================================
@@ -437,7 +511,9 @@ arima_rmse, arima_mae, arima_mape = evaluate(
 # =====================================================
 
 rf = RandomForestRegressor(
-    n_estimators=500,
+    n_estimators=100,
+    max_depth=12,
+    min_samples_leaf=5,
     random_state=42,
     n_jobs=-1
 )
@@ -452,8 +528,28 @@ rf_rmse, rf_mae, rf_mape = evaluate(y_test, rf_pred)
 
 joblib.dump(
     rf,
+    f"{MODEL_DIR}/random_forest.pkl.tmp"
+)
+os.replace(
+    f"{MODEL_DIR}/random_forest.pkl.tmp",
     f"{MODEL_DIR}/random_forest.pkl"
 )
+
+if RANDOM_FOREST_ONLY:
+    rf_score = update_random_forest_scorecard(
+        test_df,
+        y_test,
+        np.asarray(rf_pred)
+    )
+    print("\nRandom Forest retraining completed")
+    print(f"Validation RMSE: {rf_score['RMSE']:.4f}")
+    print(f"Validation MAE: {rf_score['MAE']:.4f}")
+    print(f"Validation MAPE: {rf_score['MAPE']:.4f}%")
+    print(
+        "Saved compact model to "
+        f"{MODEL_DIR}/random_forest.pkl"
+    )
+    raise SystemExit(0)
 
 # =====================================================
 # GRADIENT BOOSTING
@@ -519,48 +615,48 @@ joblib.dump(
 # SCORECARD
 # =====================================================
 
-scores = pd.DataFrame([
+model_predictions = {
+    "Random Forest": np.asarray(rf_pred),
+    "Gradient Boosting": np.asarray(gb_pred),
+    "MLP": np.asarray(mlp_pred),
+    "ARIMA": np.asarray(arima_pred)
+}
+test_symbols = test_df["symbol"].to_numpy()
+scores_rows = []
 
-    {
-        "Model":
-        "Random Forest",
+for model_name, predictions in model_predictions.items():
+    if len(predictions) != len(test_df):
+        raise ValueError(
+            f"{model_name} produced {len(predictions)} predictions for "
+            f"{len(test_df)} validation rows."
+        )
 
-        "RMSE": rf_rmse,
-        "MAE": rf_mae,
-        "MAPE": rf_mape
-    },
+    rmse, mae, mape = evaluate(y_test, predictions)
+    scores_rows.append({
+        "Symbol": "GLOBAL",
+        "Model": model_name,
+        "RMSE": rmse,
+        "MAE": mae,
+        "MAPE": mape
+    })
 
-    {
-        "Model":
-        "Gradient Boosting",
+    for symbol in pd.unique(test_symbols):
+        symbol_mask = test_symbols == symbol
+        rmse, mae, mape = evaluate(
+            y_test.iloc[np.flatnonzero(symbol_mask)],
+            predictions[symbol_mask]
+        )
+        scores_rows.append({
+            "Symbol": symbol,
+            "Model": model_name,
+            "RMSE": rmse,
+            "MAE": mae,
+            "MAPE": mape
+        })
 
-        "RMSE": gb_rmse,
-        "MAE": gb_mae,
-        "MAPE": gb_mape
-    },
-
-    {
-        "Model":
-        "MLP",
-
-        "RMSE": mlp_rmse,
-        "MAE": mlp_mae,
-        "MAPE": mlp_mape
-    },
-
-    {
-        "Model":
-        "ARIMA",
-
-        "RMSE": arima_rmse,
-        "MAE": arima_mae,
-        "MAPE": arima_mape
-    }
-
-])
-
-scores = scores.sort_values(
-    "RMSE"
+scores = pd.DataFrame(scores_rows).sort_values(
+    ["Symbol", "RMSE"],
+    kind="stable"
 )
 
 scores.to_csv(
@@ -568,10 +664,13 @@ scores.to_csv(
     index=False
 )
 
-deployable_scores = scores.loc[
-    scores["Model"] != "ARIMA"
-]
-best_model = deployable_scores.iloc[0]["Model"]
+global_scores = scores.loc[scores["Symbol"] == "GLOBAL"]
+best_model = global_scores.iloc[0]["Model"]
+leaderboard = {"GLOBAL_MODEL": best_model}
+
+for symbol in pd.unique(test_symbols):
+    symbol_scores = scores.loc[scores["Symbol"] == symbol]
+    leaderboard[symbol] = symbol_scores.iloc[0]["Model"]
 
 with open(
     f"{MODEL_DIR}/leaderboard.json",
@@ -580,10 +679,7 @@ with open(
 
     json.dump(
 
-        {
-            "GLOBAL_MODEL":
-            best_model
-        },
+        leaderboard,
 
         f,
 
