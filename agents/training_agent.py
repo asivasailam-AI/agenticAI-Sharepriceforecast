@@ -365,6 +365,7 @@ joblib.dump(
 scores = pd.DataFrame([
 
     {
+        "Symbol": SYMBOL,
         "Model":"ARIMA",
         "RMSE":arima_rmse,
         "MAE":arima_mae,
@@ -372,6 +373,7 @@ scores = pd.DataFrame([
     },
 
     {
+        "Symbol": SYMBOL,
         "Model":"Random Forest",
         "RMSE":rf_rmse,
         "MAE":rf_mae,
@@ -379,6 +381,7 @@ scores = pd.DataFrame([
     },
 
     {
+        "Symbol": SYMBOL,
         "Model":"Gradient Boosting",
         "RMSE":gb_rmse,
         "MAE":gb_mae,
@@ -386,6 +389,7 @@ scores = pd.DataFrame([
     },
 
     {
+        "Symbol": SYMBOL,
         "Model":"MLP",
         "RMSE":mlp_rmse,
         "MAE":mlp_mae,
@@ -415,6 +419,7 @@ best_model = (
 
 leaderboard = {
 
+    "GLOBAL_MODEL": best_model,
     SYMBOL: best_model
 
 }
